@@ -4,17 +4,17 @@ import s from "./SearchBar.module.css";
 import { IoSearchOutline } from "react-icons/io5";
 
 const SearchBar = ({ onSubmit }) => {
-  const [query, setQuery] = useState("");
+  const [inputValue, setInputValue] = useState("");
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (query.trim() === "") {
+    if (inputValue.trim() === "") {
       toast.error("Please enter a search term");
       return;
     }
-    onSubmit(query);
-    setQuery("");
+    onSubmit(inputValue.trim());
+    setInputValue("");
   };
 
   return (
@@ -25,8 +25,8 @@ const SearchBar = ({ onSubmit }) => {
           autoComplete="off"
           autoFocus
           placeholder="Search images and photos"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
         />
         <button type="submit">
           <IoSearchOutline />

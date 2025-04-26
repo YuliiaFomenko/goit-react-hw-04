@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import SearchBar from "./components/SearchBar/SearchBar";
 import { searchImages } from "./Api";
 import { Toaster } from "react-hot-toast";
@@ -8,13 +8,12 @@ import LoadMoreBtn from "./components/LoadMoreBtn/LoadMoreBtn";
 import ImageModal from "./components/ImageModal/ImageModal";
 
 const App = () => {
+  const [query, setQuery] = useState("");
   const [images, setImages] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [page, setPage] = useState(1);
-  const [currentPage, setCurrentPage] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
 
@@ -36,60 +35,53 @@ const App = () => {
     return columns * rows || 15;
   };
 
-  const handleSearch = async (query) => {
-    try {
-      setLoading(true);
-      setError(null);
-      setImages([]);
-      setHasMore(false);
-      setCurrentPage(query);
-      setPage(1);
+  useEffect(() => {
+    if (!query) return;
 
-      const perPage = getAdaptivePerPage();
+    const fetchImages = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      const results = await searchImages(query, perPage, 1);
+        const perPage = getAdaptivePerPage();
+        const results = await searchImages(
+          query,
+          perPage,
+          page
+        );
 
-      setImages(results);
-      setHasMore(results.length > 0);
-    } catch {
-      setError(true);
-    } finally {
-      setLoading(false);
-    }
+        setImages((prevImages) =>
+          page === 1 ? results : [...prevImages, ...results]
+        );
+        setHasMore(results.length > 0);
+      } catch {
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchImages();
+  }, [query, page]);
+
+  const handleSearch = (newQuery) => {
+    setQuery(newQuery);
+    setPage(1);
+    setImages([]);
   };
 
-  const handleLoadMore = async () => {
-    const perPage = getAdaptivePerPage();
-    const nextPage = page + 1;
-
-    try {
-      setLoadingMore(true);
-      setPage(nextPage);
-
-      const results = await searchImages(
-        currentPage,
-        perPage,
-        nextPage
-      );
-
-      setImages((prevImages) => [
-        ...prevImages,
-        ...results,
-      ]);
-      setHasMore(results.length > 0);
-
-      setTimeout(() => {
-        window.scrollBy({
-          top: window.innerHeight,
-          behavior: "smooth",
-        });
-      }, 100);
-    } catch {
-      setError(true);
-    } finally {
-      setLoadingMore(false);
-    }
+  const handleLoadMore = () => {
+    setPage((prevPage) => prevPage + 1);
+    setLoading(true);
   };
+
+  useEffect(() => {
+    if (page > 1 && !loading) {
+      window.scrollBy({
+        top: window.innerHeight,
+        behavior: "smooth",
+      });
+    }
+  }, [images]);
 
   const openModal = (image) => {
     setSelectedImage(image);
@@ -104,7 +96,6 @@ const App = () => {
     <div>
       <Toaster position="top-right" />
       <SearchBar onSubmit={handleSearch} />
-      {loading && <Loader />}
       {error && (
         <ErrorMessage text="Something went wrong. Please try again." />
       )}
@@ -119,7 +110,7 @@ const App = () => {
         onClose={closeModal}
         image={selectedImage}
       />
-      {loadingMore ? (
+      {loading ? (
         <Loader />
       ) : (
         hasMore && <LoadMoreBtn onClick={handleLoadMore} />
